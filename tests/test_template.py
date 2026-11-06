@@ -23,6 +23,7 @@ LAB_DIR = TESTS_DIR.parent
 SOLUTION_PATH = LAB_DIR / "solution-code" / "solution.py"
 TEMPLATE_PATH = LAB_DIR / "starter-code" / "template.py"
 
+
 def _load_module(path: Path, unique_name: str):
     if not path.exists():
         raise FileNotFoundError(f"Target file not found at: {path}")
@@ -96,7 +97,9 @@ class TestCallOpenAI(unittest.TestCase):
     def test_openai_returns_tuple_structure(self, MockOpenAI):
         mock_client = MagicMock()
         MockOpenAI.return_value = mock_client
-        mock_client.chat.completions.create.return_value = _make_openai_response("OpenAI Mock Response")
+        mock_client.chat.completions.create.return_value = _make_openai_response(
+            "OpenAI Mock Response"
+        )
 
         text, latency, usage = call_openai("Hello")
 
@@ -113,7 +116,9 @@ class TestCallGemini(unittest.TestCase):
     def test_gemini_returns_tuple_structure_new_sdk(self, MockGenAIClient):
         mock_client = MagicMock()
         MockGenAIClient.return_value = mock_client
-        mock_client.models.generate_content.return_value = _make_gemini_response("Gemini Mock Response")
+        mock_client.models.generate_content.return_value = _make_gemini_response(
+            "Gemini Mock Response"
+        )
 
         text, latency, usage = call_gemini("Hello")
 
@@ -130,7 +135,9 @@ class TestCallAnthropic(unittest.TestCase):
     def test_anthropic_returns_tuple_structure(self, MockAnthropic):
         mock_client = MagicMock()
         MockAnthropic.return_value = mock_client
-        mock_client.messages.create.return_value = _make_anthropic_response("Claude Mock Response")
+        mock_client.messages.create.return_value = _make_anthropic_response(
+            "Claude Mock Response"
+        )
 
         text, latency, usage = call_anthropic("Hello")
 
@@ -144,18 +151,27 @@ class TestCallAnthropic(unittest.TestCase):
 class TestCompareModels(unittest.TestCase):
 
     def test_compare_models_evaluates_correct_costs(self):
-        with patch.object(_m, "call_openai") as mock_openai, \
-             patch.object(_m, "call_gemini") as mock_gemini:
-             
+        with patch.object(_m, "call_openai") as mock_openai, patch.object(
+            _m, "call_gemini"
+        ) as mock_gemini:
+
             # Setup mock returns
             mock_openai.side_effect = [
-                ("GPT-4o Response", 0.5, {"input_tokens": 10, "output_tokens": 20}),       # 1st call: gpt-4o
-                ("GPT-4o-Mini Response", 0.3, {"input_tokens": 10, "output_tokens": 20}),  # 2nd call: gpt-4o-mini
+                (
+                    "GPT-4o Response",
+                    0.5,
+                    {"input_tokens": 10, "output_tokens": 20},
+                ),  # 1st call: gpt-4o
+                (
+                    "GPT-4o-Mini Response",
+                    0.3,
+                    {"input_tokens": 10, "output_tokens": 20},
+                ),  # 2nd call: gpt-4o-mini
             ]
             mock_gemini.return_value = (
                 "Gemini Response",
                 0.4,
-                {"input_tokens": 10, "output_tokens": 20}
+                {"input_tokens": 10, "output_tokens": 20},
             )
 
             result = compare_models("Prompt")
@@ -168,10 +184,10 @@ class TestCompareModels(unittest.TestCase):
             # Verify exact cost calculations
             # gpt-4o: (10 * 5.0 + 20 * 20.0) / 1,000,000 = 0.00045
             self.assertAlmostEqual(result["gpt4o"]["cost"], 0.00045, places=8)
-            
+
             # gpt-4o-mini: (10 * 0.150 + 20 * 0.600) / 1,000,000 = 0.0000135
             self.assertAlmostEqual(result["gpt4o_mini"]["cost"], 0.0000135, places=8)
-            
+
             # gemini-2.5-flash: (10 * 0.075 + 20 * 0.300) / 1,000,000 = 0.00000675
             self.assertAlmostEqual(result["gemini_flash"]["cost"], 0.00000675, places=8)
 
@@ -207,12 +223,32 @@ class TestBatchCompareAndFormat(unittest.TestCase):
 
     def test_batch_runs_and_formats_table(self):
         with patch.object(_m, "compare_models") as mock_comp:
-            def _get_mock():
+
+            def _get_mock(prompt):
                 return {
-                    "gpt4o": {"response": "GPT-4o response content here", "latency": 0.5, "cost": 0.00045, "input_tokens": 10, "output_tokens": 20},
-                    "gpt4o_mini": {"response": "GPT-4o-Mini response content here", "latency": 0.3, "cost": 0.0000135, "input_tokens": 10, "output_tokens": 20},
-                    "gemini_flash": {"response": "Gemini response content here", "latency": 0.4, "cost": 0.00000675, "input_tokens": 10, "output_tokens": 20}
+                    "gpt4o": {
+                        "response": "GPT-4o response content here",
+                        "latency": 0.5,
+                        "cost": 0.00045,
+                        "input_tokens": 10,
+                        "output_tokens": 20,
+                    },
+                    "gpt4o_mini": {
+                        "response": "GPT-4o-Mini response content here",
+                        "latency": 0.3,
+                        "cost": 0.0000135,
+                        "input_tokens": 10,
+                        "output_tokens": 20,
+                    },
+                    "gemini_flash": {
+                        "response": "Gemini response content here",
+                        "latency": 0.4,
+                        "cost": 0.00000675,
+                        "input_tokens": 10,
+                        "output_tokens": 20,
+                    },
                 }
+
             mock_comp.side_effect = _get_mock
 
             results = batch_compare(["Q1", "Q2"])
